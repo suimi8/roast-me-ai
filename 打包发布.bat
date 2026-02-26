@@ -75,8 +75,11 @@ if %errorlevel% neq 0 (
     echo  ================================================
     echo.
     gh auth login --web -h github.com
+    :: gh auth login --web sometimes returns non-zero even on success.
+    :: Re-verify with gh auth status instead of trusting the exit code.
+    gh auth status >nul 2>&1
     if %errorlevel% neq 0 (
-        echo  [ERROR] GitHub login failed.
+        echo  [ERROR] GitHub login failed. Please run 'gh auth login' manually.
         pause & exit /b 1
     )
     echo  [OK] GitHub login successful.

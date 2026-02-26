@@ -192,7 +192,53 @@ roast-me-ai/
 
 ---
 
-## 📄 License
+## � 致谢 / Acknowledgements
+
+本项目基于以下优秀的开源项目构建，在此表示感谢：
+
+### 核心框架
+
+| 项目 | 用途 | License |
+|------|------|---------|
+| [Electron](https://github.com/electron/electron) | 跨平台桌面应用框架 | MIT |
+| [Vue 3](https://github.com/vuejs/core) | 前端 UI 框架 | MIT |
+| [electron-vite](https://github.com/alex8088/electron-vite) | Electron + Vite 开发构建工具 | MIT |
+| [electron-builder](https://github.com/electron-userland/electron-builder) | 应用打包与分发 | MIT |
+| [Vite](https://github.com/vitejs/vite) | 前端构建工具 | MIT |
+| [TypeScript](https://github.com/microsoft/TypeScript) | 类型安全的 JavaScript | Apache-2.0 |
+
+### AI 集成
+
+| 项目 | 用途 | License |
+|------|------|---------|
+| [openai-node](https://github.com/openai/openai-node) | OpenAI / 兼容接口 SDK | Apache-2.0 |
+| [@anthropic-ai/sdk](https://github.com/anthropic-ai/sdk-python) | Anthropic Claude SDK | MIT |
+
+### 功能库
+
+| 项目 | 用途 | License |
+|------|------|---------|
+| [screenshot-desktop](https://github.com/bencevans/screenshot-desktop) | 跨平台桌面截图 | MIT |
+| [vue-router](https://github.com/vuejs/router) | Vue 路由管理 | MIT |
+| [axios](https://github.com/axios/axios) | HTTP 请求库 | MIT |
+| [dotenv](https://github.com/motdotla/dotenv) | 环境变量管理 | BSD-2-Clause |
+| [fs-extra](https://github.com/jprichardson/node-fs-extra) | 增强文件系统操作 | MIT |
+| [chokidar](https://github.com/paulmillr/chokidar) | 文件变化监听 | MIT |
+| [node-fetch](https://github.com/node-fetch/node-fetch) | Node.js Fetch API | MIT |
+
+### 开发工具
+
+| 项目 | 用途 | License |
+|------|------|---------|
+| [@electron-toolkit](https://github.com/alex8088/electron-toolkit) | Electron 开发工具集 | MIT |
+| [ESLint](https://github.com/eslint/eslint) | 代码规范检查 | MIT |
+| [Prettier](https://github.com/prettier/prettier) | 代码格式化 | MIT |
+| [Tailwind CSS](https://github.com/tailwindlabs/tailwindcss) | 原子化 CSS 框架 | MIT |
+| [vue-tsc](https://github.com/vuejs/language-tools) | Vue TypeScript 类型检查 | MIT |
+
+---
+
+## �📄 License
 
 MIT © [suimi8](https://github.com/suimi8)
 

@@ -1,0 +1,9 @@
+node_modules
+dist
+out
+.DS_Store
+.eslintcache
+*.log*
+
+# 打包产物（安装包/便携版体积较大，不纳入版本控制）
+PackageRelease/

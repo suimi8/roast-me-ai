@@ -1,14 +1,13 @@
 @echo off
-chcp 65001 >nul
-title 📦 roast-me-ai 打包 + 发布工具
+title roast-me-ai Build + Release
 
 :: ============================================================
-::  roast-me-ai 一键打包 + 自动发布 GitHub Release 脚本
-::  流程：
-::    1. 检查环境 (Node.js / npm / GitHub CLI)
-::    2. npm run build:win  →  生成 setup.exe + portable.exe
-::    3. 自动在 GitHub 创建 Release（tag = v<version>）
-::    4. 上传 exe 文件到 Release
+::  roast-me-ai - Build + Auto Publish GitHub Release
+::  Steps:
+::    1. Check env (Node.js / GitHub CLI)
+::    2. npm run build:win  ->  setup.exe + portable.exe
+::    3. Create GitHub Release  (tag = v<version>)
+::    4. Upload exe files to Release
 :: ============================================================
 
 setlocal enabledelayedexpansion
@@ -16,187 +15,177 @@ setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
 echo.
-echo  ╔══════════════════════════════════════════════════════╗
-echo  ║      roast-me-ai  打包 + 自动发布 GitHub Release    ║
-echo  ╚══════════════════════════════════════════════════════╝
+echo  ================================================
+echo      roast-me-ai  Build + GitHub Release
+echo  ================================================
 echo.
 
-:: ─────────────────────────────────────────
-::  读取版本号
-:: ─────────────────────────────────────────
+:: -------------------------------------------------
+::  Read version from package.json
+:: -------------------------------------------------
 for /f "tokens=2 delims=:, " %%v in ('findstr /i "\"version\"" package.json') do (
     set RAW_VER=%%v
 )
 set VERSION=%RAW_VER:"=%
 set TAG=v%VERSION%
-echo  项目版本 : %TAG%
-echo  GitHub   : https://github.com/suimi8/roast-me-ai
+echo  Version : %TAG%
+echo  GitHub  : https://github.com/suimi8/roast-me-ai
 echo.
 
-:: ─────────────────────────────────────────
-::  检查 Node.js
-:: ─────────────────────────────────────────
+:: -------------------------------------------------
+::  Check Node.js
+:: -------------------------------------------------
 where node >nul 2>&1
 if %errorlevel% neq 0 (
-    echo  [错误] 未检测到 Node.js，请先安装: https://nodejs.org/
+    echo  [ERROR] Node.js not found. Please install: https://nodejs.org/
     pause & exit /b 1
 )
+echo  [OK] Node.js found
+echo.
 
-:: ─────────────────────────────────────────
-::  检查 / 安装 GitHub CLI
-:: ─────────────────────────────────────────
+:: -------------------------------------------------
+::  Check / Install GitHub CLI
+:: -------------------------------------------------
 where gh >nul 2>&1
 if %errorlevel% neq 0 (
-    echo  [提示] 未检测到 GitHub CLI，正在通过 winget 自动安装...
+    echo  [INFO] GitHub CLI not found. Installing via winget...
     echo.
     winget install --id GitHub.cli -e --silent
     if %errorlevel% neq 0 (
         echo.
-        echo  [错误] GitHub CLI 安装失败，请手动安装后重试：
-        echo         https://cli.github.com/
+        echo  [ERROR] GitHub CLI install failed.
+        echo         Please install manually: https://cli.github.com/
         pause & exit /b 1
     )
     echo.
-    echo  [完成] GitHub CLI 安装成功，正在刷新环境变量...
-    :: 刷新 PATH 使 gh 立即可用
-    for /f "skip=2 tokens=3*" %%a in ('reg query HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment /v PATH') do set SYS_PATH=%%a %%b
-    set PATH=%PATH%;%SYS_PATH%
+    echo  [OK] GitHub CLI installed.
+    echo  [INFO] Please close this window and run the script again.
+    pause & exit /b 0
 )
-
-:: 再次检查 gh 是否可用
-where gh >nul 2>&1
-if %errorlevel% neq 0 (
-    echo.
-    echo  [提示] 安装后需要重启终端使 gh 生效。
-    echo         请关闭本窗口，重新双击运行此脚本。
-    pause & exit /b 1
-)
-
-echo  [✔] GitHub CLI 已就绪
+echo  [OK] GitHub CLI found
 echo.
 
-:: ─────────────────────────────────────────
-::  检查 GitHub 登录状态
-:: ─────────────────────────────────────────
+:: -------------------------------------------------
+::  Check GitHub login
+:: -------------------------------------------------
 gh auth status >nul 2>&1
 if %errorlevel% neq 0 (
-    echo  ══════════════════════════════════════════════════════
-    echo  [认证] 需要登录 GitHub，即将打开浏览器完成授权...
-    echo  ══════════════════════════════════════════════════════
+    echo  ================================================
+    echo  [AUTH] Not logged in. Opening browser for login...
+    echo  ================================================
     echo.
     gh auth login --web -h github.com
     if %errorlevel% neq 0 (
-        echo  [错误] GitHub 登录失败，请重试。
+        echo  [ERROR] GitHub login failed.
         pause & exit /b 1
     )
-    echo  [✔] GitHub 登录成功
+    echo  [OK] GitHub login successful.
+    echo.
+) else (
+    echo  [OK] GitHub already logged in
     echo.
 )
 
-:: ─────────────────────────────────────────
-::  清理旧产物（可选）
-:: ─────────────────────────────────────────
+:: -------------------------------------------------
+::  Clean old artifacts (optional)
+:: -------------------------------------------------
 set CLEAN_OLD=N
-set /p CLEAN_OLD= 是否清理 PackageRelease 中的旧 exe 文件？[y/N]:
+set /p CLEAN_OLD=Clean old exe files in PackageRelease? [y/N]:
 echo.
 if /i "%CLEAN_OLD%"=="y" (
     if exist "PackageRelease" (
         del /q "PackageRelease\*.exe" 2>nul
         del /q "PackageRelease\*.yml" 2>nul
         del /q "PackageRelease\*.blockmap" 2>nul
-        echo  [清理] 完成。
+        echo  [OK] Cleaned.
         echo.
     )
 )
 
-:: ─────────────────────────────────────────
-::  安装依赖（如需）
-:: ─────────────────────────────────────────
+:: -------------------------------------------------
+::  Install dependencies if needed
+:: -------------------------------------------------
 if not exist "node_modules" (
-    echo  [步骤 1/3] 安装 npm 依赖...
+    echo  [Step 1/3] Installing npm dependencies...
     npm install
     if %errorlevel% neq 0 (
-        echo  [错误] npm install 失败。
+        echo  [ERROR] npm install failed.
         pause & exit /b 1
     )
-    echo  [✔] 依赖安装完成。
+    echo  [OK] Dependencies installed.
     echo.
 ) else (
-    echo  [步骤 1/3] node_modules 已存在，跳过安装。
+    echo  [Step 1/3] node_modules exists, skipping install.
     echo.
 )
 
-:: ─────────────────────────────────────────
-::  打包 Windows
-:: ─────────────────────────────────────────
-echo  [步骤 2/3] 开始打包 Windows（NSIS 安装包 + 便携版）...
-echo  这可能需要几分钟，请耐心等待...
+:: -------------------------------------------------
+::  Build Windows packages
+:: -------------------------------------------------
+echo  [Step 2/3] Building Windows packages (NSIS + Portable)...
+echo  This may take a few minutes...
 echo.
 
 npm run build:win
 
 if %errorlevel% neq 0 (
     echo.
-    echo  ══════════════════════════════════════════════
-    echo  [失败] 打包过程发生错误，请查看上方日志。
-    echo  ══════════════════════════════════════════════
+    echo  ================================================
+    echo  [FAILED] Build error. Check logs above.
+    echo  ================================================
     pause & exit /b 1
 )
 
 echo.
-echo  [✔] 打包完成，正在收集生成文件...
+echo  [OK] Build complete. Collecting files...
 
-:: 收集 exe 文件列表
 set EXE_LIST=
 set FOUND=0
 for %%f in ("PackageRelease\*.exe") do (
     set EXE_LIST=!EXE_LIST! "%%f"
-    echo      ✔  %%~nxf
+    echo      + %%~nxf
     set FOUND=1
 )
 
 if "%FOUND%"=="0" (
-    echo  [错误] PackageRelease 中未找到 exe 文件，打包可能失败。
+    echo  [ERROR] No exe found in PackageRelease. Build may have failed.
     pause & exit /b 1
 )
-
 echo.
 
-:: ─────────────────────────────────────────
-::  发布 GitHub Release
-:: ─────────────────────────────────────────
-echo  [步骤 3/3] 正在发布 GitHub Release %TAG%...
+:: -------------------------------------------------
+::  Publish GitHub Release
+:: -------------------------------------------------
+echo  [Step 3/3] Publishing GitHub Release %TAG%...
 echo.
 
-:: 检查 tag 是否已存在
 gh release view %TAG% >nul 2>&1
 if %errorlevel% equ 0 (
-    echo  [提示] Release %TAG% 已存在。
+    echo  [INFO] Release %TAG% already exists.
     set OVERWRITE=N
-    set /p OVERWRITE= 是否删除旧 Release 并重新发布？[y/N]:
+    set /p OVERWRITE=Delete existing release and re-publish? [y/N]:
     echo.
     if /i "!OVERWRITE!"=="y" (
-        echo  [删除] 正在删除旧 Release %TAG%...
+        echo  Deleting old release %TAG%...
         gh release delete %TAG% --yes --cleanup-tag
-        echo  [✔] 旧 Release 已删除。
+        echo  [OK] Old release deleted.
         echo.
     ) else (
-        echo  [跳过] 保留已有 Release，仅上传新文件...
+        echo  [INFO] Keeping existing release. Uploading files only...
         goto :upload
     )
 )
 
-:: 输入 Release 说明（可选）
+:: Input release notes
 set RELEASE_NOTES=
-set /p RELEASE_NOTES= 请输入本次 Release 说明（直接回车跳过）:
+set /p RELEASE_NOTES=Enter release notes (press Enter to skip):
 echo.
 
 if "%RELEASE_NOTES%"=="" (
-    set RELEASE_NOTES=roast-me-ai %TAG% 发布
+    set RELEASE_NOTES=roast-me-ai %TAG%
 )
 
-:: 创建 Release（草稿模式先创建，然后上传文件）
-echo  正在创建 Release %TAG% ...
+echo  Creating release %TAG%...
 gh release create %TAG% ^
     --title "roast-me-ai %TAG%" ^
     --notes "%RELEASE_NOTES%" ^
@@ -204,43 +193,42 @@ gh release create %TAG% ^
 
 if %errorlevel% neq 0 (
     echo.
-    echo  [错误] 创建 Release 失败，请检查网络和 GitHub 权限。
+    echo  [ERROR] Failed to create release. Check network and GitHub permissions.
     pause & exit /b 1
 )
 
 :upload
-:: 上传 exe 文件
 echo.
-echo  正在上传安装包文件...
+echo  Uploading exe files...
 gh release upload %TAG% %EXE_LIST% ^
     --repo suimi8/roast-me-ai ^
     --clobber
 
 if %errorlevel% neq 0 (
     echo.
-    echo  [错误] 文件上传失败，请检查网络连接后重试。
+    echo  [ERROR] Upload failed. Check network and retry.
     pause & exit /b 1
 )
 
-:: ─────────────────────────────────────────
-::  完成
-:: ─────────────────────────────────────────
+:: -------------------------------------------------
+::  Done
+:: -------------------------------------------------
 echo.
-echo  ══════════════════════════════════════════════════════════
-echo  [成功] Release 发布完成！
+echo  ================================================
+echo  [SUCCESS] Release published!
 echo.
-echo      🔗 https://github.com/suimi8/roast-me-ai/releases/tag/%TAG%
+echo    https://github.com/suimi8/roast-me-ai/releases/tag/%TAG%
 echo.
-echo  ══════════════════════════════════════════════════════════
+echo  ================================================
 echo.
 
 set OPEN_PAGE=Y
-set /p OPEN_PAGE= 是否在浏览器中打开 Release 页面？[Y/n]:
+set /p OPEN_PAGE=Open release page in browser? [Y/n]:
 if /i not "%OPEN_PAGE%"=="n" (
     start "" "https://github.com/suimi8/roast-me-ai/releases/tag/%TAG%"
 )
 
 echo.
-echo  脚本执行完毕，按任意键退出...
+echo  Done. Press any key to exit...
 pause >nul
 exit /b 0

@@ -45,6 +45,20 @@
 
 ---
 
+## 📸 软件截图
+
+### 主界面
+
+![主界面 - 控制面板与实时日志](docs/screenshots/main_window.png)
+
+### 毒舌弹窗
+
+![毒舌弹窗 - 右下角弹出 AI 点评](docs/screenshots/roast_popup.png)
+
+
+
+---
+
 ## 📦 下载安装
 
 前往 [Releases 页面](https://github.com/suimi8/roast-me-ai/releases) 下载最新版本：
